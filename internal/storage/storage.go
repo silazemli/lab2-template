@@ -1,4 +1,4 @@
-package loyalty
+package storage
 
 import (
 	"os"
