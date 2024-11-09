@@ -1,4 +1,4 @@
-package models
+package loyalty
 
 type Loyalty struct {
 	ID               int    `json:"id"`
