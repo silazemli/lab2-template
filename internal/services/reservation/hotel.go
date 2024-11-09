@@ -1,4 +1,4 @@
-package models
+package reservation
 
 import (
 	"github.com/google/uuid"

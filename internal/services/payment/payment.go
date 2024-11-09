@@ -1,4 +1,4 @@
-package models
+package payment
 
 import (
 	"github.com/google/uuid"
