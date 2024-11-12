@@ -8,11 +8,11 @@ import (
 
 type Reservation struct {
 	ID             int       `json:"id"`
-	ReservationUID uuid.UUID `json:"reservation_uid"`
+	ReservationUID uuid.UUID `json:"reservationUid"`
 	Username       string    `json:"username"`
-	PaymentUID     uuid.UUID `json:"payment_uid"`
-	HotelID        int       `json:"hotel_id"`
+	PaymentUID     uuid.UUID `json:"paymentUid"`
+	HotelID        int       `json:"hotelId"`
 	Status         string    `json:"status"`
-	StartDate      time.Time `json:"start_date"`
-	EndDate        time.Time `json:"end_date"`
+	StartDate      time.Time `json:"startDate"`
+	EndDate        time.Time `json:"endDate"`
 }
