@@ -54,3 +54,17 @@ func (stg *storage) MakeReservation(reservation Reservation) error {
 	}
 	return nil
 }
+
+func (stg *storage) CancelReservation(reservationUID string) error {
+	reservation := Reservation{}
+	err := stg.db.Table("reservations").Where("uid = ?", reservationUID).Take(&reservation).Error
+	if err != nil {
+		return err
+	}
+	reservation.Status = "CANCELED"
+	err = stg.db.Table("reservations").Where("uid = ?", reservationUID).Updates(&reservation).Error
+	if err != nil {
+		return err
+	}
+	return nil
+}

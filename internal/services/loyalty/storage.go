@@ -20,6 +20,15 @@ func NewDB() (*storage, error) {
 	return &storage{db}, nil
 }
 
+func (stg *storage) GetUser(username string) (Loyalty, error) {
+	loyalty := Loyalty{}
+	err := stg.db.Table("users").Where("username = ?", username).Take(&loyalty).Error
+	if err != nil {
+		return Loyalty{}, err
+	}
+	return loyalty, nil
+}
+
 func (stg *storage) GetStatus(username string) (string, error) {
 	loyalty := Loyalty{}
 	err := stg.db.Table("users").Where("username = ?", username).Take(&loyalty).Error
@@ -36,7 +45,7 @@ func (stg *storage) IncrementCounter(username string) error {
 		return err
 	}
 	loyalty.ReservationCount += 1
-	loyalty.Status = GetStatus(loyalty.ReservationCount)
+	UpdateStatus(&loyalty)
 	err = stg.db.Table("users").Where("username = ?", username).Updates(&loyalty).Error
 	if err != nil {
 		return err
@@ -51,7 +60,7 @@ func (stg *storage) DecrementCounter(username string) error {
 		return err
 	}
 	loyalty.ReservationCount -= 1
-	loyalty.Status = GetStatus(loyalty.ReservationCount)
+	UpdateStatus(&loyalty)
 	err = stg.db.Table("users").Where("username = ?", username).Updates(&loyalty).Error
 	if err != nil {
 		return err
@@ -59,12 +68,16 @@ func (stg *storage) DecrementCounter(username string) error {
 	return nil
 }
 
-func GetStatus(numberOfReservations int) string {
+func UpdateStatus(loyalty *Loyalty) {
+	numberOfReservations := loyalty.ReservationCount
 	if numberOfReservations >= 20 {
-		return "GOLD"
+		loyalty.Status = "GOLD"
+		loyalty.Discount = 10
 	} else if numberOfReservations >= 10 {
-		return "SILVER"
+		loyalty.Status = "SILVER"
+		loyalty.Discount = 7
 	} else {
-		return "BRONZE"
+		loyalty.Status = "BRONZE"
+		loyalty.Discount = 5
 	}
 }
