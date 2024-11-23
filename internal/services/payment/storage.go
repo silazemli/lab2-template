@@ -2,7 +2,6 @@ package payment
 
 import (
 	"os"
-	"strconv"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -21,15 +20,8 @@ func NewDB() (*storage, error) {
 	return &storage{db}, nil
 }
 
-func (stg *storage) PostPayment(price string) error {
-	payment := Payment{}
-	var err error
-	payment.Price, err = strconv.Atoi(price)
-	if err != nil {
-		return err
-	}
-	payment.Status = "PAID"
-	err = stg.db.Table("payments").Create(&payment).Error
+func (stg *storage) PostPayment(thePayment Payment) error {
+	err := stg.db.Table("payments").Create(&thePayment).Error
 	if err != nil {
 		return err
 	}

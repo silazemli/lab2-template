@@ -1,9 +1,12 @@
 package clients
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/http"
-	"strconv"
+
+	"github.com/silazemli/lab2-template/internal/services/payment"
 )
 
 type PaymentClient struct {
@@ -18,13 +21,16 @@ func NewPaymentClient(client HTTPClient, baseURL string) *PaymentClient {
 	}
 }
 
-func (paymentClient *PaymentClient) CreatePayment(price int) error {
-	URL := fmt.Sprintf("%s/%s", paymentClient.baseURL, strconv.Itoa(price))
-	request, err := http.NewRequest(http.MethodPost, URL, nil)
+func (paymentClient *PaymentClient) CreatePayment(thePayment payment.Payment) error {
+	URL := paymentClient.baseURL
+	body, err := json.Marshal(thePayment)
+	if err != nil {
+		return fmt.Errorf("failed to build request body: %w", err)
+	}
+	request, err := http.NewRequest(http.MethodPost, URL, bytes.NewBuffer(body))
 	if err != nil {
 		return fmt.Errorf("failed to build request: %w", err)
 	}
-
 	response, err := paymentClient.client.Do(request)
 	if err != nil {
 		return fmt.Errorf("failed to make request: %w", err)

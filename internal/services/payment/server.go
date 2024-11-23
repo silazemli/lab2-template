@@ -16,7 +16,7 @@ func NewServer(db paymentStorage) server {
 	srv.db = db
 	srv.srv = *echo.New()
 	api := srv.srv.Group("/api/v1")
-	api.POST("/:price", srv.PostPayment)
+	api.POST("", srv.PostPayment)
 	api.PATCH("/:uid", srv.CancelPayment)
 
 	return srv
@@ -31,8 +31,12 @@ func (srv *server) Start() error {
 }
 
 func (srv *server) PostPayment(ctx echo.Context) error {
-	price := ctx.Param("price")
-	err := srv.db.PostPayment(price)
+	var thePayment Payment
+	err := ctx.Bind(&thePayment)
+	if err != nil {
+		return err
+	}
+	err = srv.db.PostPayment(thePayment)
 	if err != nil {
 		return err
 	}

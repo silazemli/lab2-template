@@ -1,6 +1,6 @@
 package payment
 
 type paymentStorage interface {
-	PostPayment(price string) error
+	PostPayment(thePayment Payment) error
 	CancelPayment(paymentUID string) error
 }

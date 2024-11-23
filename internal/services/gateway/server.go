@@ -2,9 +2,13 @@ package gateway
 
 import (
 	"net/http"
+	"time"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 	"github.com/silazemli/lab2-template/internal/services/gateway/clients"
+	"github.com/silazemli/lab2-template/internal/services/payment"
+	"github.com/silazemli/lab2-template/internal/services/reservation"
 )
 
 type server struct {
@@ -46,29 +50,133 @@ func (srv *server) Start() error {
 }
 
 func (srv *server) GetUser(ctx echo.Context) error {
-	
+	username := ctx.Request().Header.Get("X-User-Name")
+	user, err := srv.loyalty.GetUser(username)
+	if err != nil {
+		return ctx.JSON(http.StatusBadGateway, echo.Map{"error": err})
+	}
+	return ctx.JSON(http.StatusOK, user)
 }
 
 func (srv *server) GetAllHotels(ctx echo.Context) error {
-
+	hotels, err := srv.reservation.GetAllHotels()
+	if err != nil {
+		return ctx.JSON(http.StatusBadGateway, echo.Map{"error": err})
+	}
+	return ctx.JSON(http.StatusOK, hotels)
 }
 
 func (srv *server) GetAllReservations(ctx echo.Context) error {
-
+	username := ctx.Request().Header.Get("X-User-Name")
+	reservations, err := srv.reservation.GetReservations(username)
+	if err != nil {
+		return ctx.JSON(http.StatusBadGateway, echo.Map{"error": err})
+	}
+	return ctx.JSON(http.StatusOK, reservations)
 }
 
 func (srv *server) GetReservation(ctx echo.Context) error {
-
+	username := ctx.Request().Header.Get("X-User-Name")
+	reservationUId := ctx.Param("uid")
+	theReservation, err := srv.reservation.GetReservation(reservationUId, username)
+	if err != nil {
+		return ctx.JSON(http.StatusBadGateway, echo.Map{"error": err})
+	}
+	return ctx.JSON(http.StatusOK, theReservation)
 }
 
 func (srv *server) GetStatus(ctx echo.Context) error {
-
+	username := ctx.Request().Header.Get("X-User-Name")
+	status, err := srv.loyalty.GetStatus(username)
+	if err != nil {
+		return ctx.JSON(http.StatusBadGateway, echo.Map{"error": err})
+	}
+	return ctx.JSON(http.StatusOK, status)
 }
 
 func (srv *server) MakeReservation(ctx echo.Context) error {
+	hotelUID := ctx.Param("uid")
+	hotels, err := srv.reservation.GetAllHotels()
+	if err != nil {
+		return ctx.JSON(http.StatusBadGateway, echo.Map{"error": err})
+	}
+	hotelExists := false
+	var index int
+	for index = range hotels {
+		if hotels[index].HotelUID == hotelUID {
+			hotelExists = true
+			break
+		}
+	}
+	if !hotelExists {
+		return ctx.JSON(http.StatusBadRequest, echo.Map{})
+	}
 
+	dateLayout := "2000-01-02T15:04:05Z"
+	startDate, err := time.Parse(dateLayout, ctx.Param("startDate"))
+	if err != nil {
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": err})
+	}
+	endDate, err := time.Parse(dateLayout, ctx.Param("endDate"))
+	if err != nil {
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": err})
+	}
+	duration := int(endDate.Sub(startDate).Hours() / 24)
+	if duration < 0 {
+		return ctx.JSON(http.StatusBadRequest, echo.Map{})
+	}
+
+	username := ctx.Request().Header.Get("X-User-Name")
+	user, err := srv.loyalty.GetUser(username)
+	if err != nil {
+		return ctx.JSON(http.StatusBadGateway, echo.Map{"error": err})
+	}
+	discount := user.Discount
+
+	price := duration * hotels[index].Price * (100 - discount) / 100
+	thePayment := payment.Payment{
+		PaymentUID: uuid.New().String(),
+		Status:     "PAID",
+		Price:      price,
+	}
+	err = srv.payment.CreatePayment(thePayment)
+	if err != nil {
+		return ctx.JSON(http.StatusBadGateway, echo.Map{"error": err})
+	}
+
+	theReservation := reservation.Reservation{
+		ReservationUID: uuid.New().String(),
+		Username:       username,
+		StartDate:      startDate,
+		EndDate:        endDate,
+		Status:         "PAID",
+		HotelUID:       hotels[index].HotelUID,
+		PaymentUID:     thePayment.PaymentUID,
+	}
+	err = srv.reservation.MakeReservation(theReservation)
+	if err != nil {
+		return ctx.JSON(http.StatusBadGateway, echo.Map{"error": err})
+	}
+
+	err = srv.loyalty.IncrementCounter(username)
+	if err != nil {
+		return ctx.JSON(http.StatusBadGateway, echo.Map{"error": err})
+	}
+
+	return ctx.JSON(http.StatusOK, echo.Map{})
 }
 
 func (srv *server) CancelReservation(ctx echo.Context) error {
+	reservationUID := ctx.Param("reservationUid")
+	err := srv.reservation.CancelReservation(reservationUID)
+	if err != nil {
+		return ctx.JSON(http.StatusBadGateway, echo.Map{})
+	}
 
+	username := ctx.Request().Header.Get("X-User-Name")
+	err = srv.loyalty.DecrementCounter(username)
+	if err != nil {
+		return ctx.JSON(http.StatusBadGateway, echo.Map{})
+	}
+	return nil
 }
