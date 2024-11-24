@@ -38,6 +38,8 @@ func NewServer() server {
 	api.GET("reservations/:reservationUid", srv.GetReservation)
 	api.POST("/reservations", srv.MakeReservation)
 	api.DELETE("/reservations/:reservationUid", srv.CancelReservation)
+	api.GET("/manage/health", srv.HealthCheck)
+
 	return srv
 }
 
@@ -179,4 +181,8 @@ func (srv *server) CancelReservation(ctx echo.Context) error {
 		return ctx.JSON(http.StatusBadGateway, echo.Map{})
 	}
 	return nil
+}
+
+func (srv *server) HealthCheck(ctx echo.Context) error {
+	return ctx.JSON(http.StatusOK, echo.Map{})
 }

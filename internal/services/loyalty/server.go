@@ -22,6 +22,7 @@ func NewServer(db loyaltyStorage) server {
 	api.GET("/me", srv.GetUser)
 	api.PATCH("/increment", srv.IncrementCounter)
 	api.PATCH("/decrement", srv.DecrementCounter)
+	api.GET("/manage/health", srv.HealthCheck)
 
 	return srv
 }
@@ -74,4 +75,8 @@ func (srv *server) DecrementCounter(ctx echo.Context) error {
 		return ctx.JSON(http.StatusBadRequest, echo.Map{})
 	}
 	return nil
+}
+
+func (srv *server) HealthCheck(ctx echo.Context) error {
+	return ctx.JSON(http.StatusOK, echo.Map{})
 }
