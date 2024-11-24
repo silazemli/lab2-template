@@ -23,8 +23,8 @@ func NewServer() server {
 	srv := server{}
 	srv.srv = *echo.New()
 	client := &http.Client{
-		Transport: &http.Transport{MaxConnsPerHost: 10},
-		Timeout:   100,
+		Transport: &http.Transport{MaxConnsPerHost: 100},
+		Timeout:   5 * time.Second,
 	}
 	srv.loyalty = *clients.NewLoyaltyClient(client, srv.cfg.LoyaltyService)
 	srv.payment = *clients.NewPaymentClient(client, srv.cfg.PaymentService)
