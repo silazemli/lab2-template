@@ -25,22 +25,31 @@ func (paymentClient *PaymentClient) CreatePayment(thePayment payment.Payment) er
 	URL := paymentClient.baseURL
 	body, err := json.Marshal(thePayment)
 	if err != nil {
+		fmt.Println("failed to unmarshal")
 		return fmt.Errorf("failed to build request body: %w", err)
 	}
 	request, err := http.NewRequest(http.MethodPost, URL, bytes.NewBuffer(body))
 	if err != nil {
+		fmt.Println("failed to build")
 		return fmt.Errorf("failed to build request: %w", err)
 	}
-	response, err := paymentClient.client.Do(request)
+	request.Header.Set("Content-Type", "application/json")
+	responce, err := paymentClient.client.Do(request)
 	if err != nil {
+		fmt.Println("failed to make request")
 		return fmt.Errorf("failed to make request: %w", err)
 	}
-	switch response.StatusCode {
+	fmt.Println(err)
+	fmt.Println(responce.StatusCode)
+	switch responce.StatusCode {
 	case http.StatusCreated:
 		return nil
 	case http.StatusBadRequest, http.StatusInternalServerError:
+		fmt.Println("server error")
 		return fmt.Errorf("server error: %w", err)
 	default:
+		fmt.Println("wtf")
+		fmt.Println(err)
 		return fmt.Errorf("unknown error: %w", err)
 	}
 }

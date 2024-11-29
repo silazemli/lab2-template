@@ -14,23 +14,24 @@ type server struct {
 	hdb hotelStorage
 }
 
-func NewServer(rdb reservationStorage, hdb hotelStorage) server {
+func NewServer(hdb hotelStorage, rdb reservationStorage) server {
 	srv := server{}
 	srv.rdb = rdb
 	srv.hdb = hdb
 	srv.srv = *echo.New()
-	api := srv.srv.Group("api/v1")
-	api.GET("/hotels", srv.GetAllHotels)
-	api.GET("/reservations", srv.GetAllReservations)
-	api.GET("/reservations/:reservationUID", srv.GetReservation)
-	api.POST("/reservations", srv.MakeReservation)
-	api.PATCH("/reservations/:reservationUID", srv.CancelReservation)
+	api := srv.srv.Group("api/reservation")
+	api.GET("/hotels", srv.GetAllHotels)                              // +
+	api.GET("/reservations", srv.GetAllReservations)                  // +
+	api.GET("/reservations/:reservationUID", srv.GetReservation)      // +
+	api.POST("/reservations", srv.MakeReservation)                    // +
+	api.PATCH("/reservations/:reservationUID", srv.CancelReservation) // +
+	api.GET("/manage/health", srv.HealthCheck)                        // +
 
 	return srv
 }
 
 func (srv *server) Start() error {
-	err := srv.srv.Start("8070")
+	err := srv.srv.Start(":8070")
 	if err != nil {
 		return err
 	}
@@ -55,12 +56,9 @@ func (srv *server) GetAllHotels(ctx echo.Context) error {
 }
 
 func (srv *server) GetReservation(ctx echo.Context) error {
-	reservation, err := srv.rdb.GetReservation(ctx.Param("reservationUid"))
+	reservation, err := srv.rdb.GetReservation(ctx.Param("reservationUID"))
 	if errors.Is(err, gorm.ErrRecordNotFound) {
 		return ctx.JSON(http.StatusNotFound, echo.Map{})
-	}
-	if reservation.Username != ctx.Request().Header.Get("X-User-Name") {
-		return ctx.JSON(http.StatusForbidden, echo.Map{})
 	}
 	if err != nil {
 		return ctx.JSON(http.StatusNotFound, echo.Map{"error": err})
@@ -72,7 +70,6 @@ func (srv *server) GetReservation(ctx echo.Context) error {
 func (srv *server) MakeReservation(ctx echo.Context) error {
 	reservation := Reservation{}
 	err := ctx.Bind(&reservation)
-	reservation.Username = ctx.Request().Header.Get("X-User-Name")
 	if err != nil {
 		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": err})
 	}
@@ -84,10 +81,14 @@ func (srv *server) MakeReservation(ctx echo.Context) error {
 }
 
 func (srv *server) CancelReservation(ctx echo.Context) error {
-	reservationUID := ctx.Param("uid")
+	reservationUID := ctx.Param("reservationUID")
 	err := srv.rdb.CancelReservation(reservationUID)
 	if err != nil {
 		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": err})
 	}
-	return ctx.JSON(http.StatusCreated, echo.Map{})
+	return ctx.JSON(http.StatusAccepted, echo.Map{})
+}
+
+func (srv *server) HealthCheck(ctx echo.Context) error {
+	return ctx.JSON(http.StatusOK, echo.Map{})
 }

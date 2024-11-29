@@ -12,7 +12,7 @@ type storage struct {
 }
 
 func NewDB() (*storage, error) {
-	dsn := os.Getenv("PGDSN")
+	dsn := os.Getenv("LOYALTY_DB")
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
 		return &storage{}, err
@@ -22,7 +22,7 @@ func NewDB() (*storage, error) {
 
 func (stg *storage) GetUser(username string) (Loyalty, error) {
 	loyalty := Loyalty{}
-	err := stg.db.Table("users").Where("username = ?", username).Take(&loyalty).Error
+	err := stg.db.Table("loyalty").Where("username = ?", username).Take(&loyalty).Error
 	if err != nil {
 		return Loyalty{}, err
 	}
@@ -31,7 +31,7 @@ func (stg *storage) GetUser(username string) (Loyalty, error) {
 
 func (stg *storage) GetStatus(username string) (string, error) {
 	loyalty := Loyalty{}
-	err := stg.db.Table("users").Where("username = ?", username).Take(&loyalty).Error
+	err := stg.db.Table("loyalty").Where("username = ?", username).Take(&loyalty).Error
 	if err != nil {
 		return loyalty.Status, err
 	}
@@ -40,13 +40,13 @@ func (stg *storage) GetStatus(username string) (string, error) {
 
 func (stg *storage) IncrementCounter(username string) error {
 	loyalty := Loyalty{}
-	err := stg.db.Table("users").Where("username = ?", username).Take(&loyalty).Error
+	err := stg.db.Table("loyalty").Where("username = ?", username).Take(&loyalty).Error
 	if err != nil {
 		return err
 	}
 	loyalty.ReservationCount += 1
 	UpdateStatus(&loyalty)
-	err = stg.db.Table("users").Where("username = ?", username).Updates(&loyalty).Error
+	err = stg.db.Table("loyalty").Where("username = ?", username).Updates(&loyalty).Error
 	if err != nil {
 		return err
 	}
@@ -55,13 +55,13 @@ func (stg *storage) IncrementCounter(username string) error {
 
 func (stg *storage) DecrementCounter(username string) error {
 	loyalty := Loyalty{}
-	err := stg.db.Table("users").Where("username = ?", username).Take(&loyalty).Error
+	err := stg.db.Table("loyalty").Where("username = ?", username).Take(&loyalty).Error
 	if err != nil {
 		return err
 	}
 	loyalty.ReservationCount -= 1
 	UpdateStatus(&loyalty)
-	err = stg.db.Table("users").Where("username = ?", username).Updates(&loyalty).Error
+	err = stg.db.Table("loyalty").Where("username = ?", username).Updates(&loyalty).Error
 	if err != nil {
 		return err
 	}

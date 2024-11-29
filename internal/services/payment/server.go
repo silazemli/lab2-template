@@ -15,10 +15,10 @@ func NewServer(db paymentStorage) server {
 	srv := server{}
 	srv.db = db
 	srv.srv = *echo.New()
-	api := srv.srv.Group("/api/v1")
-	api.POST("", srv.PostPayment)
-	api.PATCH("/:uid", srv.CancelPayment)
-	api.GET("/manage/health", srv.HealthCheck)
+	api := srv.srv.Group("/api/payment")
+	api.POST("", srv.PostPayment)              // +
+	api.PATCH("/:uid", srv.CancelPayment)      // +
+	api.GET("/manage/health", srv.HealthCheck) // +
 
 	return srv
 }
@@ -45,8 +45,8 @@ func (srv *server) PostPayment(ctx echo.Context) error {
 }
 
 func (srv *server) CancelPayment(ctx echo.Context) error {
-	uid := ctx.Param("uid")
-	err := srv.db.CancelPayment(uid)
+	UID := ctx.Param("uid")
+	err := srv.db.CancelPayment(UID)
 	if err != nil {
 		return err
 	}

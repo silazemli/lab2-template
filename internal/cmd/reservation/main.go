@@ -1,22 +1,23 @@
-package reservation
+package main
 
 import (
 	"fmt"
+
+	"github.com/silazemli/lab2-template/internal/services/reservation"
 )
 
 func main() {
-	hdb, err := NewDB()
+	hdb, err := reservation.NewDB()
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	var rdb *storage
-	rdb, err = NewDB()
+	rdb, err := reservation.NewDB()
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	srv := NewServer(rdb, hdb)
+	srv := reservation.NewServer(rdb, hdb)
 	err = srv.Start()
 	if err != nil {
 		fmt.Println(err)

@@ -9,9 +9,72 @@ services:
       POSTGRES_DB: postgres
     volumes:
       - db-data:/var/lib/postgresql/data
-      - ./postgres/:/docker-entrypoint-initdb.d/
+      - ./postgres/:/docker-entrypoint-initdb.d
     ports:
-      - "8080:5432"
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  reservation:
+    build: 
+      context: .
+      dockerfile: /deploys/reservation.Dockerfile
+    container_name: reservation
+    restart: on-failure
+    environment:
+      RESERVATION_DB : postgresql://postgres:postgres@host.docker.internal:5432/reservations?sslmode=disable
+    ports:
+      - "8070:8070"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  payment:
+    build:
+      context: .
+      dockerfile: /deploys/payment.Dockerfile
+    container_name: payment
+    restart: on-failure
+    environment:
+      PAYMENT_DB: postgresql://postgres:postgres@host.docker.internal:5432/payments?sslmode=disable
+    ports:
+      - "8060:8060"
+    depends_on:
+      postgres:
+        condition: service_healthy
+  
+  loyalty:
+    build:
+      context: .
+      dockerfile: /deploys/loyalty.Dockerfile
+    container_name: loyalty
+    restart: on-failure
+    environment:
+      LOYALTY_DB: postgresql://postgres:postgres@host.docker.internal:5432/loyalties?sslmode=disable
+    ports:
+      - "8050:8050"
+    depends_on:
+      postgres:
+        condition: service_healthy
+  
+  gateway:
+    build:
+      context: .
+      dockerfile: /deploys/gateway.Dockerfile
+    container_name: gateway
+    restart: on-failure
+    environment:
+      LOYALTY_SERVICE: http://host.docker.internal:8050/api/loyalty
+      RESERVATION_SERVICE: http://localhost:8070/api/reservation
+      PAYMENT_SERVICE: http://host.docker.internal:8060/api/payment
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
 
 volumes:
   db-data:

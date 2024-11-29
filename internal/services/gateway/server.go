@@ -1,6 +1,9 @@
 package gateway
 
 import (
+	"encoding/json"
+	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -22,6 +25,8 @@ type server struct {
 func NewServer() server {
 	srv := server{}
 	srv.srv = *echo.New()
+	srv.cfg = *NewConfig()
+
 	client := &http.Client{
 		Transport: &http.Transport{MaxConnsPerHost: 100},
 		Timeout:   5 * time.Second,
@@ -31,14 +36,14 @@ func NewServer() server {
 	srv.reservation = *clients.NewReservationClient(client, srv.cfg.ReservationService)
 
 	api := srv.srv.Group("/api/v1")
-	api.GET("/hotels", srv.GetAllHotels)
-	api.GET("/me", srv.GetUser)
-	api.GET("/loyalty", srv.GetStatus)
-	api.GET("/reservations", srv.GetAllReservations)
-	api.GET("reservations/:reservationUid", srv.GetReservation)
-	api.POST("/reservations", srv.MakeReservation)
-	api.DELETE("/reservations/:reservationUid", srv.CancelReservation)
-	api.GET("/manage/health", srv.HealthCheck)
+	api.GET("/hotels", srv.GetAllHotels)                               // +
+	api.GET("/me", srv.GetUser)                                        // +
+	api.GET("/loyalty", srv.GetStatus)                                 // +
+	api.GET("/reservations", srv.GetAllReservations)                   // +
+	api.GET("/reservations/:reservationUid", srv.GetReservation)       // +
+	api.POST("/reservations", srv.MakeReservation)                     // +
+	api.DELETE("/reservations/:reservationUid", srv.CancelReservation) // +
+	api.GET("/manage/health", srv.HealthCheck)                         // +
 
 	return srv
 }
@@ -79,11 +84,15 @@ func (srv *server) GetAllReservations(ctx echo.Context) error {
 
 func (srv *server) GetReservation(ctx echo.Context) error {
 	username := ctx.Request().Header.Get("X-User-Name")
-	reservationUId := ctx.Param("uid")
-	theReservation, err := srv.reservation.GetReservation(reservationUId, username)
+	reservationUID := ctx.Param("reservationUid")
+	theReservation, err := srv.reservation.GetReservation(reservationUID)
 	if err != nil {
 		return ctx.JSON(http.StatusBadGateway, echo.Map{"error": err})
 	}
+	if username != theReservation.Username {
+		return ctx.JSON(http.StatusForbidden, echo.Map{"error": err})
+	}
+
 	return ctx.JSON(http.StatusOK, theReservation)
 }
 
@@ -97,7 +106,19 @@ func (srv *server) GetStatus(ctx echo.Context) error {
 }
 
 func (srv *server) MakeReservation(ctx echo.Context) error {
-	hotelUID := ctx.Param("uid")
+	body, err := io.ReadAll(ctx.Request().Body)
+	if err != nil {
+		return fmt.Errorf("failed to read response body: %w", err)
+	}
+	var model struct {
+		HotelUID  string `json:"hotelUid"`
+		StartDate string `json:"startDate"`
+		EndDate   string `json:"endDate"`
+	}
+	if err := json.Unmarshal(body, &model); err != nil {
+		return fmt.Errorf("failed to unmarshal request body: %w", err)
+	}
+	hotelUID := model.HotelUID
 	hotels, err := srv.reservation.GetAllHotels()
 	if err != nil {
 		return ctx.JSON(http.StatusBadGateway, echo.Map{"error": err})
@@ -114,12 +135,12 @@ func (srv *server) MakeReservation(ctx echo.Context) error {
 		return ctx.JSON(http.StatusBadRequest, echo.Map{})
 	}
 
-	dateLayout := "2000-01-02T15:04:05Z"
-	startDate, err := time.Parse(dateLayout, ctx.Param("startDate"))
+	dateLayout := "2006-01-02"
+	startDate, err := time.Parse(dateLayout, model.StartDate)
 	if err != nil {
 		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": err})
 	}
-	endDate, err := time.Parse(dateLayout, ctx.Param("endDate"))
+	endDate, err := time.Parse(dateLayout, model.EndDate)
 	if err != nil {
 		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": err})
 	}
@@ -152,9 +173,10 @@ func (srv *server) MakeReservation(ctx echo.Context) error {
 		StartDate:      startDate,
 		EndDate:        endDate,
 		Status:         "PAID",
-		HotelUID:       hotels[index].HotelUID,
+		HotelID:        hotels[index].ID,
 		PaymentUID:     thePayment.PaymentUID,
 	}
+
 	err = srv.reservation.MakeReservation(theReservation)
 	if err != nil {
 		return ctx.JSON(http.StatusBadGateway, echo.Map{"error": err})
@@ -171,6 +193,15 @@ func (srv *server) MakeReservation(ctx echo.Context) error {
 func (srv *server) CancelReservation(ctx echo.Context) error {
 	reservationUID := ctx.Param("reservationUid")
 	err := srv.reservation.CancelReservation(reservationUID)
+	if err != nil {
+		return ctx.JSON(http.StatusBadGateway, echo.Map{})
+	}
+
+	reservation, err := srv.reservation.GetReservation(reservationUID)
+	if err != nil {
+		return ctx.JSON(http.StatusBadGateway, echo.Map{})
+	}
+	err = srv.payment.CancelPayment(reservation.PaymentUID)
 	if err != nil {
 		return ctx.JSON(http.StatusBadGateway, echo.Map{})
 	}

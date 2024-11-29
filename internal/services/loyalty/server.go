@@ -18,11 +18,11 @@ func NewServer(db loyaltyStorage) server {
 	srv.db = db
 	srv.srv = *echo.New()
 	api := srv.srv.Group("/api/loyalty")
-	api.GET("", srv.GetStatus)
-	api.GET("/me", srv.GetUser)
-	api.PATCH("/increment", srv.IncrementCounter)
-	api.PATCH("/decrement", srv.DecrementCounter)
-	api.GET("/manage/health", srv.HealthCheck)
+	api.GET("", srv.GetStatus)                    // +
+	api.GET("/me", srv.GetUser)                   // +
+	api.PATCH("/increment", srv.IncrementCounter) // +
+	api.PATCH("/decrement", srv.DecrementCounter) // +
+	api.GET("/manage/health", srv.HealthCheck)    // +
 
 	return srv
 }
@@ -50,13 +50,10 @@ func (srv *server) GetUser(ctx echo.Context) error {
 func (srv *server) GetStatus(ctx echo.Context) error {
 	username := ctx.Request().Header.Get("X-User-Name")
 	status, err := srv.db.GetStatus(username)
-	if errors.Is(err, gorm.ErrRecordNotFound) {
-		return ctx.JSON(http.StatusNotFound, echo.Map{})
-	}
 	if err != nil {
 		return ctx.JSON(http.StatusNotFound, echo.Map{"error": err})
 	}
-	return ctx.JSON(http.StatusOK, status)
+	return ctx.JSON(http.StatusOK, echo.Map{"status": status})
 }
 
 func (srv *server) IncrementCounter(ctx echo.Context) error {
