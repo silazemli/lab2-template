@@ -16,9 +16,10 @@ func NewServer(db paymentStorage) server {
 	srv.db = db
 	srv.srv = *echo.New()
 	api := srv.srv.Group("/api/payment")
-	api.POST("", srv.PostPayment)              // +
-	api.PATCH("/:uid", srv.CancelPayment)      // +
-	api.GET("/manage/health", srv.HealthCheck) // +
+	api.POST("", srv.PostPayment)         // +
+	api.PATCH("/:uid", srv.CancelPayment) // +
+
+	srv.srv.GET("/manage/health", srv.HealthCheck)
 
 	return srv
 }

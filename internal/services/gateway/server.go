@@ -43,7 +43,8 @@ func NewServer() server {
 	api.GET("/reservations/:reservationUid", srv.GetReservation)       // +
 	api.POST("/reservations", srv.MakeReservation)                     // +
 	api.DELETE("/reservations/:reservationUid", srv.CancelReservation) // +
-	api.GET("/manage/health", srv.HealthCheck)                         // +
+
+	srv.srv.GET("/manage/health", srv.HealthCheck)
 
 	return srv
 }

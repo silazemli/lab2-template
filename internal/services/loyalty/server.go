@@ -22,7 +22,8 @@ func NewServer(db loyaltyStorage) server {
 	api.GET("/me", srv.GetUser)                   // +
 	api.PATCH("/increment", srv.IncrementCounter) // +
 	api.PATCH("/decrement", srv.DecrementCounter) // +
-	api.GET("/manage/health", srv.HealthCheck)    // +
+
+	srv.srv.GET("/manage/health", srv.HealthCheck)
 
 	return srv
 }

@@ -25,7 +25,8 @@ func NewServer(hdb hotelStorage, rdb reservationStorage) server {
 	api.GET("/reservations/:reservationUID", srv.GetReservation)      // +
 	api.POST("/reservations", srv.MakeReservation)                    // +
 	api.PATCH("/reservations/:reservationUID", srv.CancelReservation) // +
-	api.GET("/manage/health", srv.HealthCheck)                        // +
+
+	srv.srv.GET("/manage/health", srv.HealthCheck)
 
 	return srv
 }
