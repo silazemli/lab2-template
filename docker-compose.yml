@@ -25,7 +25,7 @@ services:
     container_name: reservation
     restart: on-failure
     environment:
-      RESERVATION_DB : postgresql://postgres:postgres@host.docker.internal:5432/reservations?sslmode=disable
+      RESERVATION_DB : postgresql://postgres:postgres@host.docker.internal:5432/reservations?sslmode=disable #host.docker.internal
     ports:
       - "8070:8070"
     depends_on:
@@ -68,7 +68,7 @@ services:
     restart: on-failure
     environment:
       LOYALTY_SERVICE: http://host.docker.internal:8050/api/loyalty
-      RESERVATION_SERVICE: http://localhost:8070/api/reservation
+      RESERVATION_SERVICE: http://host.docker.internal:8070/api/reservation
       PAYMENT_SERVICE: http://host.docker.internal:8060/api/payment
     ports:
       - "8080:8080"
