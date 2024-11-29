@@ -41,6 +41,8 @@ CREATE TABLE reservation
     end_date        TIMESTAMP WITH TIME ZONE
 );
 
+INSERT INTO public.hotels(hotel_uid, name, country, city, address, stars, price)
+VALUES ('049161bb-badd-4fa8-9d90-87c9a82b0668'::uuid, 'Ararat Park Hyatt Moscow', 'Россия', 'Москва', 'Неглинная ул., 4', 5, 10000);
 
 \c loyalties
 CREATE TABLE loyalty
@@ -53,8 +55,6 @@ CREATE TABLE loyalty
     discount          INT         NOT NULL
 );
 
+
 INSERT INTO public.loyalty (username, reservation_count, status, discount)
 VALUES ('Test Max', 25, 'GOLD', 10);
-
-INSERT INTO public.hotels(hotel_uid, name, country, city, address, stars, price)
-VALUES ('049161bb-badd-4fa8-9d90-87c9a82b0668'::uuid, 'Ararat Park Hyatt Moscow', 'Россия', 'Москва', 'Неглинная ул., 4', 5, 10000);
