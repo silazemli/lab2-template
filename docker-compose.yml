@@ -67,9 +67,9 @@ services:
     container_name: gateway
     restart: on-failure
     environment:
-      LOYALTY_SERVICE: http://postgres:8050/api/loyalty
-      RESERVATION_SERVICE: http://postgres:8070/api/reservation
-      PAYMENT_SERVICE: http://postgres:8060/api/payment
+      LOYALTY_SERVICE: http://loyalty:8050/api/loyalty
+      RESERVATION_SERVICE: http://reservation:8070/api/reservation
+      PAYMENT_SERVICE: http://payment:8060/api/payment
     ports:
       - "8080:8080"
     depends_on:
