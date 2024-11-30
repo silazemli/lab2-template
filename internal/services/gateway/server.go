@@ -76,7 +76,6 @@ func (srv *server) GetUser(ctx echo.Context) error {
 	if err != nil {
 		return ctx.JSON(http.StatusBadGateway, echo.Map{"error": err})
 	}
-	fmt.Println(loyalty)
 	loyaltyResponse := createLoyaltyResponseNoCount(loyalty) // out of ideas for names
 	response.Loyalty = loyaltyResponse
 
@@ -153,12 +152,11 @@ func (srv *server) GetReservation(ctx echo.Context) error {
 	reservationUID := ctx.Param("reservationUid")
 	theReservation, err := srv.reservation.GetReservation(reservationUID)
 	if err != nil {
-		return ctx.JSON(http.StatusBadGateway, echo.Map{"error": err})
+		return ctx.JSON(http.StatusNotFound, echo.Map{"error": err})
 	}
 	if username != theReservation.Username {
 		return ctx.JSON(http.StatusForbidden, echo.Map{"error": err})
 	}
-	fmt.Println(theReservation)
 	response := srv.createReservationResponse(theReservation)
 	return ctx.JSON(http.StatusOK, response)
 }
@@ -169,7 +167,6 @@ func (srv *server) GetStatus(ctx echo.Context) error {
 	if err != nil {
 		return ctx.JSON(http.StatusBadGateway, echo.Map{"error": err})
 	}
-	fmt.Println(loyalty)
 	response := createLoyaltyResponse(loyalty)
 
 	return ctx.JSON(http.StatusOK, response)
