@@ -25,6 +25,8 @@ func NewServer(hdb hotelStorage, rdb reservationStorage) server {
 	api.GET("/reservations/:reservationUID", srv.GetReservation)      // +
 	api.POST("/reservations", srv.MakeReservation)                    // +
 	api.PATCH("/reservations/:reservationUID", srv.CancelReservation) // +
+	api.GET("/hotels/:hotelUID", srv.GetHotelID)
+	api.GET("/hotels/hotel/:ID", srv.GetHotel)
 
 	srv.srv.GET("/manage/health", srv.HealthCheck)
 
@@ -88,6 +90,24 @@ func (srv *server) CancelReservation(ctx echo.Context) error {
 		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": err})
 	}
 	return ctx.JSON(http.StatusAccepted, echo.Map{})
+}
+
+func (srv *server) GetHotelID(ctx echo.Context) error {
+	hotelUID := ctx.Param("hotelUID")
+	ID, err := srv.hdb.GetHotelID(hotelUID)
+	if err != nil {
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": err})
+	}
+	return ctx.JSON(http.StatusOK, echo.Map{"id": ID})
+}
+
+func (srv *server) GetHotel(ctx echo.Context) error {
+	hotelUID := ctx.Param("ID")
+	hotel, err := srv.hdb.GetHotel(hotelUID)
+	if err != nil {
+		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": err})
+	}
+	return ctx.JSON(http.StatusOK, hotel)
 }
 
 func (srv *server) HealthCheck(ctx echo.Context) error {

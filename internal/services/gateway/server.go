@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -37,12 +38,12 @@ func NewServer() server {
 
 	api := srv.srv.Group("/api/v1")
 	api.GET("/hotels", srv.GetAllHotels)                               // +
-	api.GET("/me", srv.GetUser)                                        // +
+	api.GET("/me", srv.GetUser)                                        // +?
 	api.GET("/loyalty", srv.GetStatus)                                 // +
-	api.GET("/reservations", srv.GetAllReservations)                   // +
+	api.GET("/reservations", srv.GetAllReservations)                   // +?
 	api.GET("/reservations/:reservationUid", srv.GetReservation)       // +
-	api.POST("/reservations", srv.MakeReservation)                     // +
-	api.DELETE("/reservations/:reservationUid", srv.CancelReservation) // +
+	api.POST("/reservations", srv.MakeReservation)                     // +?
+	api.DELETE("/reservations/:reservationUid", srv.CancelReservation) // +?
 
 	srv.srv.GET("/manage/health", srv.HealthCheck)
 
@@ -59,19 +60,79 @@ func (srv *server) Start() error {
 
 func (srv *server) GetUser(ctx echo.Context) error {
 	username := ctx.Request().Header.Get("X-User-Name")
-	user, err := srv.loyalty.GetUser(username)
+	response := userInfoResponse{}
+
+	reservations, err := srv.reservation.GetReservations(username) // create a list of reservations
 	if err != nil {
 		return ctx.JSON(http.StatusBadGateway, echo.Map{"error": err})
 	}
-	return ctx.JSON(http.StatusOK, user)
+	reservationsResponse := make([]reservationResponse, len(reservations))
+	for index, theReservation := range reservations {
+		reservationsResponse[index] = srv.createReservationResponse(theReservation)
+	}
+	response.Reservations = reservationsResponse
+
+	loyalty, err := srv.loyalty.GetUser(username) // create this specific loyalty response
+	if err != nil {
+		return ctx.JSON(http.StatusBadGateway, echo.Map{"error": err})
+	}
+	fmt.Println(loyalty)
+	loyaltyResponse := createLoyaltyResponseNoCount(loyalty) // out of ideas for names
+	response.Loyalty = loyaltyResponse
+
+	return ctx.JSON(http.StatusOK, response)
 }
 
 func (srv *server) GetAllHotels(ctx echo.Context) error {
+	pageStr := ctx.QueryParam("page")
+	sizeStr := ctx.QueryParam("size")
+
+	page := 1
+	size := 1
+
+	if pageStr != "" {
+		var err error
+		page, err := strconv.Atoi(pageStr)
+		if err != nil || page < 0 {
+			return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid page number"})
+		}
+	}
+
+	if sizeStr != "" {
+		var err error
+		size, err := strconv.Atoi(sizeStr)
+		if err != nil || size < 1 || size > 100 {
+			return ctx.JSON(http.StatusBadRequest, echo.Map{"error": "Invalid size number"})
+		}
+	}
+
 	hotels, err := srv.reservation.GetAllHotels()
 	if err != nil {
 		return ctx.JSON(http.StatusBadGateway, echo.Map{"error": err})
 	}
-	return ctx.JSON(http.StatusOK, hotels)
+
+	start := (page - 1) * size
+	end := start + size
+	if end > len(hotels) {
+		end = len(hotels)
+	}
+	if end-start < size {
+		size = end - start
+	}
+
+	response := struct {
+		Page   int                 `json:"page"`
+		Size   int                 `json:"pageSize"`
+		Total  int                 `json:"totalElements"`
+		Hotels []reservation.Hotel `json:"items"`
+	}{
+		Page:   page,
+		Size:   size,
+		Total:  len(hotels),
+		Hotels: hotels[start:end],
+	}
+
+	return ctx.JSON(http.StatusOK, response)
 }
 
 func (srv *server) GetAllReservations(ctx echo.Context) error {
@@ -80,7 +141,11 @@ func (srv *server) GetAllReservations(ctx echo.Context) error {
 	if err != nil {
 		return ctx.JSON(http.StatusBadGateway, echo.Map{"error": err})
 	}
-	return ctx.JSON(http.StatusOK, reservations)
+	response := make([]reservationResponse, len(reservations))
+	for index, theReservation := range reservations {
+		response[index] = srv.createReservationResponse(theReservation)
+	}
+	return ctx.JSON(http.StatusOK, response)
 }
 
 func (srv *server) GetReservation(ctx echo.Context) error {
@@ -93,55 +158,53 @@ func (srv *server) GetReservation(ctx echo.Context) error {
 	if username != theReservation.Username {
 		return ctx.JSON(http.StatusForbidden, echo.Map{"error": err})
 	}
-
-	return ctx.JSON(http.StatusOK, theReservation)
+	fmt.Println(theReservation)
+	response := srv.createReservationResponse(theReservation)
+	return ctx.JSON(http.StatusOK, response)
 }
 
 func (srv *server) GetStatus(ctx echo.Context) error {
 	username := ctx.Request().Header.Get("X-User-Name")
-	status, err := srv.loyalty.GetStatus(username)
+	loyalty, err := srv.loyalty.GetUser(username)
 	if err != nil {
 		return ctx.JSON(http.StatusBadGateway, echo.Map{"error": err})
 	}
-	return ctx.JSON(http.StatusOK, status)
+	fmt.Println(loyalty)
+	response := createLoyaltyResponse(loyalty)
+
+	return ctx.JSON(http.StatusOK, response)
 }
 
 func (srv *server) MakeReservation(ctx echo.Context) error {
 	body, err := io.ReadAll(ctx.Request().Body)
 	if err != nil {
-		return fmt.Errorf("failed to read response body: %w", err)
+		return fmt.Errorf("failed to read response body: %w", err) // parse request
 	}
-	var model struct {
+	var reservationRequest struct {
 		HotelUID  string `json:"hotelUid"`
 		StartDate string `json:"startDate"`
 		EndDate   string `json:"endDate"`
 	}
-	if err := json.Unmarshal(body, &model); err != nil {
+	if err := json.Unmarshal(body, &reservationRequest); err != nil {
 		return fmt.Errorf("failed to unmarshal request body: %w", err)
 	}
-	hotelUID := model.HotelUID
-	hotels, err := srv.reservation.GetAllHotels()
+
+	hotelUID := reservationRequest.HotelUID
+	hotelID, err := srv.reservation.GetHotelID(hotelUID) // getting hotel ID and hotel by ID for some reason
 	if err != nil {
-		return ctx.JSON(http.StatusBadGateway, echo.Map{"error": err})
+		return fmt.Errorf("hotel does not exist: %w", err)
 	}
-	hotelExists := false
-	var index int
-	for index = range hotels {
-		if hotels[index].HotelUID == hotelUID {
-			hotelExists = true
-			break
-		}
-	}
-	if !hotelExists {
-		return ctx.JSON(http.StatusBadRequest, echo.Map{})
+	hotel, err := srv.reservation.GetHotel(strconv.Itoa(hotelID))
+	if err != nil {
+		return fmt.Errorf("hotel not found: %w", err)
 	}
 
 	dateLayout := "2006-01-02"
-	startDate, err := time.Parse(dateLayout, model.StartDate)
+	startDate, err := time.Parse(dateLayout, reservationRequest.StartDate) // parsing time
 	if err != nil {
 		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": err})
 	}
-	endDate, err := time.Parse(dateLayout, model.EndDate)
+	endDate, err := time.Parse(dateLayout, reservationRequest.EndDate)
 	if err != nil {
 		return ctx.JSON(http.StatusBadRequest, echo.Map{"error": err})
 	}
@@ -150,14 +213,14 @@ func (srv *server) MakeReservation(ctx echo.Context) error {
 		return ctx.JSON(http.StatusBadRequest, echo.Map{})
 	}
 
-	username := ctx.Request().Header.Get("X-User-Name")
+	username := ctx.Request().Header.Get("X-User-Name") // getting the discount
 	user, err := srv.loyalty.GetUser(username)
 	if err != nil {
 		return ctx.JSON(http.StatusBadGateway, echo.Map{"error": err})
 	}
 	discount := user.Discount
 
-	price := duration * hotels[index].Price * (100 - discount) / 100
+	price := duration * hotel.Price * (100 - discount) / 100 // calculating price
 	thePayment := payment.Payment{
 		PaymentUID: uuid.New().String(),
 		Status:     "PAID",
@@ -174,7 +237,7 @@ func (srv *server) MakeReservation(ctx echo.Context) error {
 		StartDate:      startDate,
 		EndDate:        endDate,
 		Status:         "PAID",
-		HotelID:        hotels[index].ID,
+		HotelID:        hotelID,
 		PaymentUID:     thePayment.PaymentUID,
 	}
 
@@ -188,7 +251,7 @@ func (srv *server) MakeReservation(ctx echo.Context) error {
 		return ctx.JSON(http.StatusBadGateway, echo.Map{"error": err})
 	}
 
-	return ctx.JSON(http.StatusOK, echo.Map{})
+	return ctx.JSON(http.StatusOK, srv.createReservationCreatedResponse(theReservation))
 }
 
 func (srv *server) CancelReservation(ctx echo.Context) error {
@@ -212,7 +275,7 @@ func (srv *server) CancelReservation(ctx echo.Context) error {
 	if err != nil {
 		return ctx.JSON(http.StatusBadGateway, echo.Map{})
 	}
-	return nil
+	return ctx.JSON(http.StatusNoContent, echo.Map{})
 }
 
 func (srv *server) HealthCheck(ctx echo.Context) error {

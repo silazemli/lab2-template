@@ -1,8 +1,7 @@
 package reservation
 
 type Hotel struct {
-	ID       int    `json:"id"`
-	HotelUID string `json:"hotel_uid"`
+	HotelUID string `json:"hotelUid"`
 	Name     string `json:"name"`
 	Country  string `json:"country"`
 	City     string `json:"city"`

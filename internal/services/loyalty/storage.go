@@ -29,15 +29,6 @@ func (stg *storage) GetUser(username string) (Loyalty, error) {
 	return loyalty, nil
 }
 
-func (stg *storage) GetStatus(username string) (string, error) {
-	loyalty := Loyalty{}
-	err := stg.db.Table("loyalty").Where("username = ?", username).Take(&loyalty).Error
-	if err != nil {
-		return loyalty.Status, err
-	}
-	return loyalty.Status, nil
-}
-
 func (stg *storage) IncrementCounter(username string) error {
 	loyalty := Loyalty{}
 	err := stg.db.Table("loyalty").Where("username = ?", username).Take(&loyalty).Error

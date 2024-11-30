@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 
 	"github.com/silazemli/lab2-template/internal/services/payment"
@@ -72,5 +73,34 @@ func (paymentClient *PaymentClient) CancelPayment(paymentUID string) error {
 		return fmt.Errorf("server error: %w", err)
 	default:
 		return fmt.Errorf("unknown error: %w", err)
+	}
+}
+
+func (paymentClient PaymentClient) GetPayment(paymentUID string) (payment.Payment, error) {
+	URL := fmt.Sprintf("%s/%s", paymentClient.baseURL, paymentUID)
+	request, err := http.NewRequest(http.MethodGet, URL, nil)
+	if err != nil {
+		return payment.Payment{}, fmt.Errorf("failed to build request: %w", err)
+	}
+
+	response, err := paymentClient.client.Do(request)
+	if err != nil {
+		return payment.Payment{}, fmt.Errorf("failed to make request: %w", err)
+	}
+	switch response.StatusCode {
+	case http.StatusOK:
+		body, err := io.ReadAll(response.Body)
+		if err != nil {
+			return payment.Payment{}, fmt.Errorf("failed to read response body: %w", err)
+		}
+		var thePayment payment.Payment
+		if err := json.Unmarshal(body, &thePayment); err != nil {
+			return payment.Payment{}, fmt.Errorf("failed to unmarshal response: %w", err)
+		}
+		return thePayment, nil
+	case http.StatusBadRequest, http.StatusInternalServerError:
+		return payment.Payment{}, fmt.Errorf("server error: %w", err)
+	default:
+		return payment.Payment{}, fmt.Errorf("unknown error: %w", err)
 	}
 }

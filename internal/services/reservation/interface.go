@@ -2,6 +2,8 @@ package reservation
 
 type hotelStorage interface {
 	GetAll() ([]Hotel, error)
+	GetHotelID(hotelUID string) (int, error)
+	GetHotel(ID string) (Hotel, error)
 }
 
 type reservationStorage interface {

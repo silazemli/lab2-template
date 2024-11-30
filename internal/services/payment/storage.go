@@ -28,6 +28,15 @@ func (stg *storage) PostPayment(thePayment Payment) error {
 	return nil
 }
 
+func (stg *storage) GetPayment(paymentUID string) (Payment, error) {
+	payment := Payment{}
+	err := stg.db.Table("payment").Where("payment_uid = ?", paymentUID).Take(&payment).Error
+	if err != nil {
+		return Payment{}, err
+	}
+	return payment, nil
+}
+
 func (stg *storage) CancelPayment(paymentUID string) error {
 	payment := Payment{}
 	err := stg.db.Table("payment").Where("payment_uid = ?", paymentUID).Take(&payment).Error

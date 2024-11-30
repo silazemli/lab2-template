@@ -68,3 +68,21 @@ func (stg *storage) CancelReservation(reservationUID string) error {
 	}
 	return nil
 }
+
+func (stg *storage) GetHotelID(hotelUID string) (int, error) {
+	var ID int
+	err := stg.db.Table("hotels").Where("hotel_uid = ?", hotelUID).Select("id").Take(&ID).Error
+	if err != nil {
+		return -1, err
+	}
+	return ID, nil
+}
+
+func (stg *storage) GetHotel(ID string) (Hotel, error) {
+	var hotel Hotel
+	err := stg.db.Table("hotels").Where("id = ?", ID).Take(&hotel).Error
+	if err != nil {
+		return Hotel{}, err
+	}
+	return hotel, nil
+}
