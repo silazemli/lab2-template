@@ -50,7 +50,7 @@ type reservationCreatedResponse struct {
 	HotelUID       string          `json:"hotelUid"`
 	StartDate      string          `json:"startDate"`
 	EndDate        string          `json:"endDate"`
-	Discount       int             `jsin:"discount"`
+	Discount       string          `json:"discount"`
 	Status         string          `json:"status"`
 	Payment        paymentResponse `json:"payment"`
 }
@@ -58,8 +58,8 @@ type reservationCreatedResponse struct {
 func (srv *server) createReservationResponse(theReservation reservation.Reservation) reservationResponse {
 	response := reservationResponse{}
 	response.ReservationUID = theReservation.ReservationUID
-	response.StartDate = theReservation.StartDate.String()
-	response.EndDate = theReservation.EndDate.String()
+	response.StartDate = ymd(theReservation.StartDate)
+	response.EndDate = ymd(theReservation.EndDate)
 	response.Status = theReservation.Status
 
 	hotel, err := srv.reservation.GetHotel(strconv.Itoa(theReservation.HotelID))
@@ -111,8 +111,8 @@ func createLoyaltyResponseNoCount(theLoyalty loyalty.Loyalty) loyaltyResponseNoC
 func (srv *server) createReservationCreatedResponse(theReservation reservation.Reservation) reservationCreatedResponse {
 	response := reservationCreatedResponse{}
 	response.ReservationUID = theReservation.ReservationUID
-	response.StartDate = theReservation.StartDate.String()
-	response.EndDate = theReservation.EndDate.String()
+	response.StartDate = ymd(theReservation.StartDate)
+	response.EndDate = ymd(theReservation.EndDate)
 	response.Status = theReservation.Status
 
 	hotel, err := srv.reservation.GetHotel(strconv.Itoa(theReservation.HotelID))
@@ -131,7 +131,11 @@ func (srv *server) createReservationCreatedResponse(theReservation reservation.R
 	if err != nil {
 		return reservationCreatedResponse{}
 	}
-	response.Discount = loyalty.Discount
+	response.Discount = strconv.Itoa(loyalty.Discount)
 
 	return response
+}
+
+func ymd(date string) string {
+	return date[0:10]
 }

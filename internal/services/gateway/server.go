@@ -231,8 +231,8 @@ func (srv *server) MakeReservation(ctx echo.Context) error {
 	theReservation := reservation.Reservation{
 		ReservationUID: uuid.New().String(),
 		Username:       username,
-		StartDate:      startDate,
-		EndDate:        endDate,
+		StartDate:      startDate.Format(dateLayout),
+		EndDate:        endDate.Format(dateLayout),
 		Status:         "PAID",
 		HotelID:        hotelID,
 		PaymentUID:     thePayment.PaymentUID,
