@@ -49,3 +49,12 @@ jobs:
         if: always()
         continue-on-error: true
         run: docker compose down -v
+      
+      - name: Logs
+        if: always()
+        continue-on-error: true
+        run: |
+          docker logs reservation
+          docker logs loyalty
+          docker logs payment
+          docker logs gateway

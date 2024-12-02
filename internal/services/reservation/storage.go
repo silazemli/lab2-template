@@ -3,6 +3,7 @@ package reservation
 import (
 	"os"
 
+	"github.com/rs/zerolog/log"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -24,6 +25,7 @@ func (stg *storage) GetAll() ([]Hotel, error) {
 	hotels := []Hotel{}
 	err := stg.db.Table("hotels").Find(&hotels).Error
 	if err != nil {
+		log.Info().Msg("Failed at db level")
 		return []Hotel{}, err
 	}
 	return hotels, nil
