@@ -2,7 +2,6 @@ package gateway
 
 import (
 	"github.com/ilyakaznacheev/cleanenv"
-	"github.com/rs/zerolog/log"
 )
 
 type Config struct {
@@ -19,11 +18,11 @@ func NewConfig() *Config {
 	if err != nil {
 		return nil
 	}
-	log.Info().Msg(cfg.LoyaltyService + " " + cfg.PaymentService + " " + cfg.ReservationService)
+
 	err = cleanenv.ReadConfig(localPath, &cfg)
 	if err != nil {
 		return nil
 	}
-	log.Info().Msg("  " + cfg.LoyaltyService + " " + cfg.PaymentService + " " + cfg.ReservationService)
+
 	return &cfg
 }

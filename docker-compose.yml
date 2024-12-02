@@ -12,6 +12,8 @@ services:
       - ./postgres/:/docker-entrypoint-initdb.d
     ports:
       - "5432:5432"
+    networks:
+      - my_persistent_network
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "postgres"]
       interval: 5s
@@ -28,6 +30,8 @@ services:
       RESERVATION_DB : postgresql://postgres:postgres@postgres:5432/reservations?sslmode=disable #host.docker.internal
     ports:
       - "8070:8070"
+    networks:
+      - my_persistent_network
     depends_on:
       postgres:
         condition: service_healthy
@@ -42,6 +46,8 @@ services:
       PAYMENT_DB: postgresql://postgres:postgres@postgres:5432/payments?sslmode=disable
     ports:
       - "8060:8060"
+    networks:
+      - my_persistent_network
     depends_on:
       postgres:
         condition: service_healthy
@@ -56,6 +62,8 @@ services:
       LOYALTY_DB: postgresql://postgres:postgres@postgres:5432/loyalties?sslmode=disable
     ports:
       - "8050:8050"
+    networks:
+      - my_persistent_network
     depends_on:
       postgres:
         condition: service_healthy
@@ -72,9 +80,15 @@ services:
       PAYMENT_SERVICE: http://host.docker.internal:8060/api/payment
     ports:
       - "8080:8080"
+    networks:
+      - my_persistent_network
     depends_on:
       postgres:
         condition: service_healthy
+
+networks:
+  my_persistent_network:
+    driver: bridge
 
 volumes:
   db-data:
