@@ -40,15 +40,6 @@ jobs:
           environment: v2/postman/environment.json
           delayRequest: 100
           reporters: '[ "cli" ]'
-
-      - uses: education/autograding@v1
-        id: autograder
-        continue-on-error: true
-
-      - name: Stop containers
-        if: always()
-        continue-on-error: true
-        run: docker compose down -v
       
       - name: Logs
         if: always()
@@ -58,3 +49,13 @@ jobs:
           docker logs loyalty
           docker logs payment
           docker logs gateway
+          
+      - uses: education/autograding@v1
+        id: autograder
+        continue-on-error: true
+
+      - name: Stop containers
+        if: always()
+        continue-on-error: true
+        run: docker compose down -v
+      
