@@ -24,6 +24,6 @@ func NewConfig() *Config {
 	if err != nil {
 		return nil
 	}
-
+	log.Info().Msg("  " + cfg.LoyaltyService + " " + cfg.PaymentService + " " + cfg.ReservationService)
 	return &cfg
 }
