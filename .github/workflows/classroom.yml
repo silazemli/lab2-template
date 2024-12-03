@@ -8,6 +8,30 @@ on:
     branches:
       - master
 jobs:
+  test-gateway:
+    name: Test Gateway Service
+    uses: ./.github/workflows/test.yml
+    with:
+      service-name: gateway
+
+  test-loyalty:
+    name: Test Loyalty Service
+    uses: ./.github/workflows/test.yml
+    with:
+      service-name: loyalty
+
+  test-payment:
+    name: Test Payment Service
+    uses: ./.github/workflows/test.yml
+    with:
+      service-name: payment
+
+  test-reservation:
+    name: Test Reservation Service
+    uses: ./.github/workflows/test.yml
+    with:
+      service-name: reservation
+
   build:
     name: Autograding
     runs-on: ubuntu-latest
